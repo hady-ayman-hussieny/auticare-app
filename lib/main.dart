@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'core/theme/theme.dart';
-import 'core/router.dart';
-import 'providers/auth_provider.dart';
+import 'package:auticare/core/theme/theme.dart';
+import 'package:auticare/core/router/app_router.dart';
+import 'package:auticare/features/auth/logic/auth_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

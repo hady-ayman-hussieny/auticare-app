@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'app_colors.dart';
-import 'app_typography.dart';
+import 'package:auticare/core/theme/app_colors.dart';
+import 'package:auticare/core/theme/app_typography.dart';
 
 /// AutiCare global ThemeData
 ///
@@ -254,7 +254,7 @@ class AppTheme {
           color: AppColors.neutral700,
           fontWeight: FontWeight.w500,
         ),
-        shape: StadiumBorder(
+        shape: const StadiumBorder(
           side: BorderSide(color: AppColors.neutral200),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -646,14 +646,14 @@ class AppTheme {
       ),
 
       // ── Bottom Navigation (dark) ──────────────────────────────────────
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.bgSecondaryDark,
         selectedItemColor: AppColors.accentDark,
         unselectedItemColor: AppColors.mutedDark,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
-        selectedLabelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w400),
+        selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w400),
       ),
 
       // ── Navigation Bar M3 (dark) ──────────────────────────────────────
