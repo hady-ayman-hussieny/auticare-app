@@ -40,8 +40,13 @@ class _AddChildScreenState extends State<AddChildScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _loading = true; _error = ''; });
     try {
+      final nameParts = _nameCtrl.text.trim().split(' ');
+      final firstName = nameParts.first;
+      final lastName = nameParts.sublist(1).join(' ');
+
       final child = await childrenService.createChild({
-        'name': _nameCtrl.text.trim(),
+        'firstName': firstName,
+        'lastName': lastName,
         'dateOfBirth': _dobCtrl.text.trim(),
         'gender': _gender,
         'medicalHistory': _medHistoryCtrl.text.trim(),
@@ -133,7 +138,13 @@ class _AddChildScreenState extends State<AddChildScreen> {
                     controller: _nameCtrl,
                     textInputAction: TextInputAction.next,
                     prefixIcon: const Icon(Icons.person_outline_rounded),
-                    validator: (v) => v == null || v.trim().isEmpty ? 'Name is required' : null,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Name is required';
+                      if (v.trim().split(' ').length < 2) {
+                        return 'Please enter both first name and last name';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
 

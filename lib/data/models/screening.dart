@@ -54,14 +54,30 @@ class ScreeningResult {
   });
 
   factory ScreeningResult.fromJson(Map<String, dynamic> json) {
-    double d(dynamic v) => double.tryParse(v?.toString() ?? '0') ?? 0.0;
+    double d(dynamic v) {
+      final val = double.tryParse(v?.toString() ?? '0') ?? 0.0;
+      // If score is represented as an integer percentage like 50 or 100, normalize it to 0.0 - 1.0
+      return val > 1.0 ? val / 100.0 : val;
+    }
+
+    final rawProbability = (json['probability'] ?? '').toString();
+    final rawRiskLevel = (json['riskLevel'] ?? '').toString();
+
+    // The backend swaps riskLevel (holds % like "40%") and probability (holds "Medium").
+    // We swap them back if rawRiskLevel has % and rawProbability is a qualitative label.
+    final hasPercent = rawRiskLevel.contains('%');
+    final isQualitative = ['low', 'medium', 'high', 'moderate'].contains(rawProbability.toLowerCase());
+
+    final resolvedRisk = (hasPercent && isQualitative) ? rawProbability : rawRiskLevel;
+    final resolvedProb = (hasPercent && isQualitative) ? rawRiskLevel : rawProbability;
+
     return ScreeningResult(
       childName: (json['childName'] ?? '').toString(),
       predictionClass: (json['predictionClass'] ?? '').toString(),
       confidenceScore: d(json['confidenceScore']),
       aqScore: int.tryParse((json['aqScore'] ?? 0).toString()) ?? 0,
-      riskLevel: (json['riskLevel'] ?? '').toString(),
-      probability: (json['probability'] ?? '').toString(),
+      riskLevel: resolvedRisk,
+      probability: resolvedProb,
       socialAttention: d(json['socialAttention']),
       jointAttention: d(json['jointAttention']),
       socialCommunication: d(json['socialCommunication']),

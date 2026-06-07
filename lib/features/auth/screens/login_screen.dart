@@ -43,7 +43,9 @@ class _LoginScreenState extends State<LoginScreen> {
         context.go(AppRoutes.parentHome);
       }
     } catch (e) {
-      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+      if (mounted) {
+        setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+      }
     }
   }
 

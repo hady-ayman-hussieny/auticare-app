@@ -50,13 +50,19 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _error = '');
     final auth = context.read<AuthProvider>();
     try {
+      final capitalizedRole = _role == 'parent'
+          ? 'Parent'
+          : _role == 'doctor'
+              ? 'Doctor'
+              : 'Therapist';
+
       await auth.signup({
-        'name': _nameCtrl.text.trim(),
+        'fullName': _nameCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
         'password': _passCtrl.text,
         'phone': _phoneCtrl.text.trim(),
         'nationalId': _natIdCtrl.text.trim(),
-        'role': _role,
+        'role': capitalizedRole,
       });
       if (!mounted) return;
       if (_role == 'doctor' || _role == 'therapist') {
@@ -65,7 +71,9 @@ class _SignupScreenState extends State<SignupScreen> {
         context.go(AppRoutes.addChild);
       }
     } catch (e) {
-      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+      if (mounted) {
+        setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+      }
     }
   }
 
@@ -213,19 +221,36 @@ class _SignupScreenState extends State<SignupScreen> {
 
                           AppTextField(
                             label: 'Phone number',
+                            hint: '01012345678',
                             controller: _phoneCtrl,
                             keyboardType: TextInputType.phone,
                             textInputAction: TextInputAction.next,
                             prefixIcon: const Icon(Icons.phone_outlined),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return 'Phone number is required';
+                              final reg = RegExp(r'^01[0125][0-9]{8}$');
+                              if (!reg.hasMatch(v.trim())) {
+                                return 'Enter a valid Egyptian mobile number (e.g., 01012345678)';
+                              }
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 14),
 
                           AppTextField(
                             label: 'National ID',
+                            hint: '14-digit number',
                             controller: _natIdCtrl,
                             keyboardType: TextInputType.number,
                             textInputAction: TextInputAction.next,
                             prefixIcon: const Icon(Icons.badge_outlined),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return 'National ID is required';
+                              if (v.trim().length != 14 || !RegExp(r'^[0-9]+$').hasMatch(v.trim())) {
+                                return 'Enter a valid 14-digit National ID';
+                              }
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 14),
 
@@ -242,6 +267,9 @@ class _SignupScreenState extends State<SignupScreen> {
                             validator: (v) {
                               if (v == null || v.isEmpty) return 'Password is required';
                               if (v.length < 6) return 'At least 6 characters';
+                              if (!v.contains(RegExp(r'[A-Z]'))) {
+                                return 'Must contain at least one uppercase letter';
+                              }
                               return null;
                             },
                           ),

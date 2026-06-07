@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:auticare/features/auth/logic/auth_provider.dart';
 import 'package:auticare/core/constants/app_routes.dart';
 import 'package:auticare/core/theme/app_colors.dart';
@@ -8,6 +9,7 @@ import 'package:auticare/data/models/child.dart';
 import 'package:auticare/data/models/booking.dart';
 import 'package:auticare/data/services/children_service.dart';
 import 'package:auticare/data/services/bookings_service.dart';
+import 'package:auticare/data/services/screening_service.dart';
 import 'package:auticare/shared/components/app_shell.dart';
 
 class ParentHomeScreen extends StatefulWidget {
@@ -20,6 +22,7 @@ class ParentHomeScreen extends StatefulWidget {
 class _ParentHomeScreenState extends State<ParentHomeScreen> {
   List<ChildModel> _children = [];
   List<BookingModel> _upcomingBookings = [];
+  Map<String, bool> _screeningStatuses = {};
   bool _loading = true;
 
   @override
@@ -35,11 +38,38 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
         childrenService.getChildren(),
         bookingsService.getUpcomingBookings(),
       ]);
+      final children = results[0] as List<ChildModel>;
+      final bookings = results[1] as List<BookingModel>;
+
+      final prefs = await SharedPreferences.getInstance();
+      final Map<String, bool> statuses = {};
+      for (final child in children) {
+        statuses[child.id] = prefs.getBool('screeningSubmitted_${child.id}') ?? false;
+      }
+
       if (mounted) {
         setState(() {
-          _children = results[0] as List<ChildModel>;
-          _upcomingBookings = results[1] as List<BookingModel>;
+          _children = children;
+          _upcomingBookings = bookings;
+          _screeningStatuses = statuses;
         });
+      }
+
+      // Check results from the backend in the background for unflagged profiles
+      for (final child in children) {
+        if (statuses[child.id] != true) {
+          screeningService.getResults(child.id).then((resultsList) async {
+            if (resultsList.isNotEmpty) {
+              final p = await SharedPreferences.getInstance();
+              await p.setBool('screeningSubmitted_${child.id}', true);
+              if (mounted) {
+                setState(() {
+                  _screeningStatuses[child.id] = true;
+                });
+              }
+            }
+          }).catchError((_) {});
+        }
       }
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
@@ -201,6 +231,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
   }
 
   Widget _buildChildCard(BuildContext context, ChildModel child, bool isDark, ThemeData theme) {
+    final hasSubmitted = _screeningStatuses[child.id] ?? false;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
@@ -232,8 +263,14 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             ),
           ),
           TextButton(
-            onPressed: () => context.go('${AppRoutes.screening}?childId=${child.id}'),
-            child: const Text('Screen'),
+            onPressed: () {
+              if (hasSubmitted) {
+                context.go('${AppRoutes.screeningResults}?childId=${child.id}');
+              } else {
+                context.go('${AppRoutes.screening}?childId=${child.id}');
+              }
+            },
+            child: Text(hasSubmitted ? 'Results' : 'Screen'),
           ),
         ],
       ),
