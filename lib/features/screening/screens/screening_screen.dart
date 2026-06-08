@@ -115,21 +115,23 @@ class _ScreeningScreenState extends State<ScreeningScreen> {
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
           onPressed: () async {
+            final nav = Navigator.of(context);
+            final router = GoRouter.of(context);
             final confirm = await showDialog<bool>(
               context: context,
               builder: (_) => AlertDialog(
                 title: const Text('Exit Screening?'),
                 content: const Text('Your progress will be lost.'),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                  TextButton(onPressed: () => nav.pop(false), child: const Text('Cancel')),
                   TextButton(
-                    onPressed: () => Navigator.pop(context, true),
+                    onPressed: () => nav.pop(true),
                     child: const Text('Exit', style: TextStyle(color: AppColors.danger500)),
                   ),
                 ],
               ),
             );
-            if ((confirm ?? false) && mounted) context.go(AppRoutes.parentHome);
+            if ((confirm ?? false) && mounted) router.go(AppRoutes.parentHome);
           },
         ),
         title: Column(

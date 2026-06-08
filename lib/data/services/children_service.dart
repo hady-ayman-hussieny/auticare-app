@@ -31,6 +31,9 @@ class ChildrenService {
     return ChildModel.fromJson(res.data!);
   }
 
+  /// Alias for getChildren — used by ChildProvider
+  Future<List<ChildModel>> getMyChildren() => getChildren();
+
   Future<void> deleteChild(String id) async {
     await api.delete('/children/$id');
   }

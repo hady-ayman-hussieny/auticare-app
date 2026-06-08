@@ -31,6 +31,12 @@ import 'package:auticare/features/sessions/screens/doctor_sessions_screen.dart';
 // Screens – Therapist
 import 'package:auticare/features/therapist/screens/therapist_home_screen.dart';
 
+// Screens – Chat
+import 'package:auticare/features/chat/screens/chat_screen.dart';
+
+// Screens – Treatment Plans
+import 'package:auticare/features/treatment_plans/screens/treatment_plan_screen.dart';
+
 GoRouter buildRouter(AuthProvider authProvider) {
   return GoRouter(
     refreshListenable: authProvider,
@@ -134,6 +140,17 @@ GoRouter buildRouter(AuthProvider authProvider) {
         path: AppRoutes.parentReScreening,
         builder: (_, __) => const ParentReScreeningScreen(),
       ),
+      GoRoute(
+        path: AppRoutes.parentChat,
+        builder: (_, __) => const ChatScreen(),
+      ),
+      GoRoute(
+        path: '/parent/chat/:chatId',
+        builder: (_, state) {
+          final chatId = state.pathParameters['chatId']!;
+          return ChatScreen(initialChatId: chatId);
+        },
+      ),
 
       // ── Doctor / Specialist ───────────────────────────────────────────────
       GoRoute(
@@ -155,11 +172,43 @@ GoRouter buildRouter(AuthProvider authProvider) {
         path: AppRoutes.doctorSessions,
         builder: (_, __) => const DoctorSessionsScreen(),
       ),
+      GoRoute(
+        path: AppRoutes.doctorChat,
+        builder: (_, __) => const ChatScreen(),
+      ),
 
       // ── Therapist ─────────────────────────────────────────────────────────
       GoRoute(
         path: AppRoutes.therapistHome,
         builder: (_, __) => const TherapistHomeScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.therapistPatients,
+        builder: (_, __) => const DoctorPatientsScreen(),
+      ),
+      GoRoute(
+        path: '/therapist/patients/:id',
+        builder: (_, state) {
+          final id = state.pathParameters['id']!;
+          return PatientDetailScreen(childId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.therapistSessions,
+        builder: (_, __) => const DoctorSessionsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.therapistChat,
+        builder: (_, __) => const ChatScreen(),
+      ),
+
+      // ── Shared Treatment Plan Route ────────────────────────────────────────
+      GoRoute(
+        path: '/treatment-plan/:childId',
+        builder: (_, state) {
+          final childId = state.pathParameters['childId']!;
+          return TreatmentPlanScreen(childId: childId);
+        },
       ),
     ],
   );

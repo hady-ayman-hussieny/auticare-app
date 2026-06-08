@@ -18,13 +18,19 @@ class AppRoutes {
   static const String myBookings = '/parent/bookings';
   static const String parentSessions = '/parent/sessions';
   static const String parentReScreening = '/parent/re-screening';
+  static const String parentChat = '/parent/chat';
+  static const String parentChatConversation = '/parent/chat/:chatId';
 
   // Doctor / Specialist
   static const String doctorHome = '/doctor/home';
   static const String doctorPatients = '/doctor/patients';
   static const String patientDetail = '/doctor/patients/:id';
   static const String doctorSessions = '/doctor/sessions';
+  static const String doctorChat = '/doctor/chat';
 
   // Therapist
   static const String therapistHome = '/therapist/home';
+  static const String therapistPatients = '/therapist/patients';
+  static const String therapistSessions = '/therapist/sessions';
+  static const String therapistChat = '/therapist/chat';
 }

@@ -4,69 +4,16 @@ import 'package:provider/provider.dart';
 import 'package:auticare/features/auth/logic/auth_provider.dart';
 import 'package:auticare/core/constants/app_routes.dart';
 import 'package:auticare/core/theme/app_colors.dart';
-
-// Complete mock models to satisfy UI representation
-class MockChild {
-  final String id;
-  final String name;
-  final String? profileImage;
-  final int age;
-  final String gender;
-
-  const MockChild({
-    required this.id,
-    required this.name,
-    this.profileImage,
-    required this.age,
-    required this.gender,
-  });
-}
-
-class MockTreatmentPlan {
-  final String id;
-  final String childId;
-  final String title;
-  final String description;
-  final String status;
-
-  const MockTreatmentPlan({
-    required this.id,
-    required this.childId,
-    required this.title,
-    required this.description,
-    required this.status,
-  });
-}
-
-class MockNotification {
-  final String id;
-  final String title;
-  final String message;
-  final bool isRead;
-  final DateTime createdAt;
-
-  const MockNotification({
-    required this.id,
-    required this.title,
-    required this.message,
-    required this.isRead,
-    required this.createdAt,
-  });
-}
-
-class MockNote {
-  final String id;
-  final String title;
-  final String content;
-  final DateTime createdAt;
-
-  const MockNote({
-    required this.id,
-    required this.title,
-    required this.content,
-    required this.createdAt,
-  });
-}
+import 'package:auticare/data/models/child.dart';
+import 'package:auticare/data/models/treatment_plan_model.dart';
+import 'package:auticare/data/models/note_model.dart';
+import 'package:auticare/data/models/notification_model.dart';
+import 'package:auticare/data/models/dashboard_model.dart';
+import 'package:auticare/data/services/children_service.dart';
+import 'package:auticare/data/services/dashboard_service.dart';
+import 'package:auticare/data/services/treatment_plans_service.dart';
+import 'package:auticare/data/services/notes_service.dart';
+import 'package:auticare/data/services/notifications_service.dart';
 
 class ParentHomeScreen extends StatefulWidget {
   const ParentHomeScreen({super.key});
@@ -76,77 +23,54 @@ class ParentHomeScreen extends StatefulWidget {
 }
 
 class _ParentHomeScreenState extends State<ParentHomeScreen> {
-  // Static mock data to match React ParentHome.tsx features
-  final List<MockChild> _children = [
-    const MockChild(id: 'c1', name: 'Liam Archer', age: 4, gender: 'Male'),
-    const MockChild(id: 'c2', name: 'Sophia Archer', age: 6, gender: 'Female'),
-  ];
+  List<ChildModel> _children = [];
+  List<TreatmentPlanModel> _plans = [];
+  List<NoteModel> _notes = [];
+  List<NotificationModel> _notifications = [];
+  DashboardParentModel _dashboardData = DashboardParentModel.empty;
 
-  final List<MockTreatmentPlan> _plans = [
-    const MockTreatmentPlan(
-      id: 'p1',
-      childId: 'c1',
-      title: 'Speech & Language Protocol',
-      description: 'Focusing on phonetics development, visual prompts, and daily vocabulary routines.',
-      status: 'Active',
-    ),
-    const MockTreatmentPlan(
-      id: 'p2',
-      childId: 'c2',
-      title: 'Social Interaction Guideline',
-      description: 'Structured group play therapy, emotion regulation, and collaborative learning games.',
-      status: 'In Progress',
-    ),
-  ];
+  bool _loading = true;
 
-  final List<MockNotification> _notifications = [
-    MockNotification(
-      id: 'n1',
-      title: 'Treatment Plan Updated',
-      message: 'Liam\'s Speech Protocol has been updated by Dr. Sarah Jenkins.',
-      isRead: false,
-      createdAt: DateTime.now().subtract(const Duration(minutes: 45)),
-    ),
-    MockNotification(
-      id: 'n2',
-      title: 'New Session Note',
-      message: 'Therapist Emma Watson added guidelines for Sophia\'s home exercises.',
-      isRead: false,
-      createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-    ),
-    MockNotification(
-      id: 'n3',
-      title: 'Booking Confirmed',
-      message: 'Consultation with Dr. Jenkins scheduled for Thursday at 10:00 AM.',
-      isRead: true,
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    MockNotification(
-      id: 'n4',
-      title: 'Assessment Complete',
-      message: 'Liam\'s developmental screening scoring has been calculated.',
-      isRead: true,
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboard();
+  }
 
-  final List<MockNote> _notes = [
-    MockNote(
-      id: 'nt1',
-      title: 'Communication Exercises',
-      content: 'Incorporate 15 minutes of structured pointing and picture exchange communication system (PECS) prompts before dinner.',
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    MockNote(
-      id: 'nt2',
-      title: 'Sensory Overload Recovery',
-      content: 'In case of sensory triggers, use the noise-cancelling headphones and direct Liam to the designated quiet corner for 10 minutes.',
-      createdAt: DateTime.now().subtract(const Duration(days: 3)),
-    ),
-  ];
+  Future<void> _loadDashboard() async {
+    if (mounted) setState(() => _loading = true);
+    try {
+      final childList = await childrenService.getChildren().catchError((_) => <ChildModel>[]);
+      
+      // Fetch treatment plans for all children in parallel
+      List<TreatmentPlanModel> planList = [];
+      if (childList.isNotEmpty) {
+        final plansArrays = await Future.wait(
+          childList.map((c) => treatmentPlansService.getChildPlans(c.id).catchError((_) => <TreatmentPlanModel>[])),
+        );
+        planList = plansArrays.expand((x) => x).toList();
+      }
+
+      final results = await Future.wait([
+        dashboardService.getParentDashboard().catchError((_) => DashboardParentModel.empty),
+        notesService.getMyNotes().catchError((_) => <NoteModel>[]),
+        notificationsService.getNotifications(limit: 4).catchError((_) => <NotificationModel>[]),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _children = childList;
+          _plans = planList;
+          _dashboardData = results[0] as DashboardParentModel;
+          _notes = results[1] as List<NoteModel>;
+          _notifications = results[2] as List<NotificationModel>;
+        });
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _loading = false);
+  }
 
   void _handleStartScreening() {
-    // Navigate to screening using first child id or generic add-child if empty
     if (_children.isNotEmpty) {
       context.go('${AppRoutes.screening}?childId=${_children.first.id}');
     } else {
@@ -161,13 +85,27 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     final isDark = theme.brightness == Brightness.dark;
     final firstName = (auth.user?.name ?? 'Parent').split(' ').first;
 
+    if (_loading) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(color: AppColors.orange500),
+              const SizedBox(height: 16),
+              Text(
+                'Configuring parent dashboard...',
+                style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.slate500, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: () async {
-          // Trigger a simulated refresh reload state
-          await Future.delayed(const Duration(milliseconds: 500));
-          if (mounted) setState(() {});
-        },
+        onRefresh: _loadDashboard,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -307,7 +245,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     final stats = [
       {'label': 'Registered\nChildren', 'value': '${_children.length}', 'icon': '👶', 'color': isDark ? Colors.blue[900]!.withValues(alpha: 0.2) : Colors.blue[50]},
       {'label': 'Active Care\nPlans', 'value': '${_plans.length}', 'icon': '📋', 'color': isDark ? Colors.green[900]!.withValues(alpha: 0.2) : Colors.green[50]},
-      {'label': 'Upcoming\nConsultations', 'value': '1', 'icon': '👨‍⚕️', 'color': isDark ? Colors.orange[900]!.withValues(alpha: 0.2) : Colors.orange[50]},
+      {'label': 'Upcoming\nConsultations', 'value': '${_dashboardData.upcomingSessions}', 'icon': '👨‍⚕️', 'color': isDark ? Colors.orange[900]!.withValues(alpha: 0.2) : Colors.orange[50]},
       {'label': 'Unread\nAlerts', 'value': '$unreadAlerts', 'icon': '🔔', 'color': isDark ? Colors.red[900]!.withValues(alpha: 0.2) : Colors.red[50]},
     ];
 
@@ -688,10 +626,14 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            plan.title,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                          Expanded(
+                            child: Text(
+                              plan.title,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           Container(
@@ -718,6 +660,8 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                           color: isDark ? AppColors.slate400 : AppColors.slate600,
                           height: 1.3,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 12),
                       Align(
@@ -800,7 +744,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
           if (_notifications.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(child: Text('No care alerts yet.')),
+              child: Center(child: Text('No care alerts yet.', style: TextStyle(fontSize: 12))),
             )
           else
             ListView.separated(
@@ -809,43 +753,34 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               itemCount: _notifications.length,
               separatorBuilder: (context, index) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
-                final notif = _notifications[index];
+                final n = _notifications[index];
                 return Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: notif.isRead
+                    color: n.isRead
                         ? (isDark ? const Color(0xFF1E293B) : AppColors.slate50)
-                        : (isDark ? Colors.orange[900]!.withValues(alpha: 0.15) : AppColors.orange500.withValues(alpha: 0.08)),
-                    border: Border.all(
-                      color: notif.isRead
-                          ? Colors.transparent
-                          : (isDark ? Colors.orange[800]!.withValues(alpha: 0.3) : AppColors.orange500.withValues(alpha: 0.2)),
-                    ),
+                        : (isDark ? const Color(0xFF2E1A1A) : AppColors.orange100.withValues(alpha: 0.2)),
                     borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: n.isRead ? Colors.transparent : AppColors.orange500.withValues(alpha: 0.15),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        notif.title,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        notif.message,
+                        n.title,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDark ? AppColors.slate400 : AppColors.slate500,
-                          height: 1.3,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : AppColors.slate900,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 2),
                       Text(
-                        '${notif.createdAt.hour}:${notif.createdAt.minute.toString().padLeft(2, '0')}',
-                        style: TextStyle(
-                          fontSize: 9,
-                          color: isDark ? AppColors.slate500 : AppColors.slate500,
+                        n.message,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: isDark ? AppColors.slate400 : AppColors.slate600,
+                          fontSize: 10,
                         ),
                       ),
                     ],
@@ -858,7 +793,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     );
   }
 
-  // 7. Recent Care Notes Section
+  // 7. Specialist Care Notes Section
   Widget _buildNotesSection(BuildContext context, ThemeData theme, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -874,7 +809,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.mode_comment_outlined, color: Colors.purple, size: 20),
+              const Icon(Icons.note_alt_outlined, color: Colors.purple, size: 20),
               const SizedBox(width: 8),
               Text(
                 'Recent Notes & Guidelines',
@@ -888,18 +823,18 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
           if (_notes.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(child: Text('No specialist notes added yet.')),
+              child: Center(child: Text('No specialist notes added yet.', style: TextStyle(fontSize: 12))),
             )
           else
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: _notes.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemCount: _notes.length > 3 ? 3 : _notes.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final note = _notes[index];
                 return Container(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF1E293B) : AppColors.slate50,
                     borderRadius: BorderRadius.circular(16),
@@ -909,28 +844,25 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                     children: [
                       Text(
                         '📝 ${note.title}',
-                        style: theme.textTheme.bodyMedium?.copyWith(
+                        style: theme.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : AppColors.slate900,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Text(
                         '"${note.content}"',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDark ? AppColors.slate300 : AppColors.slate500,
+                          color: isDark ? AppColors.slate300 : AppColors.slate700,
                           fontStyle: FontStyle.italic,
-                          height: 1.35,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Align(
-                        alignment: Alignment.centerRight,
+                        alignment: Alignment.bottomRight,
                         child: Text(
-                          '${note.createdAt.year}-${note.createdAt.month}-${note.createdAt.day}',
-                          style: TextStyle(
-                            fontSize: 9,
-                            color: isDark ? AppColors.slate500 : AppColors.slate500,
-                          ),
+                          note.createdAt.split('T').first,
+                          style: const TextStyle(fontSize: 9, color: AppColors.slate400),
                         ),
                       ),
                     ],
